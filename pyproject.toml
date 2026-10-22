@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lsm-kvstore"
+version = "1.0.0"
+description = "Crash-resilient LSM-Tree Key-Value Engine from Scratch with Write-Ahead Logging"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Storage Engine Engineer" }
+]
+keywords = ["database", "storage-engine", "lsm-tree", "wal", "crash-safety", "key-value"]
+
+[project.scripts]
+lsm-kv = "lsm.cli:main"
+lsm-server = "lsm.server:main"
+

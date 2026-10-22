@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0d14">
+    <title>LSM-Tree Key-Value Storage Engine &mdash; Zero Data Loss &amp; Crash Resilient</title>
+    <meta name="description" content="Production-grade, crash-resilient Log-Structured Merge Tree (LSM-Tree) key-value engine from scratch. Features WAL with CRC32 checksums, hardware fsync, SkipList MemTable, Bloom Filter, and K-way compaction.">
+    
+    <!-- OpenGraph -->
+    <meta property="og:title" content="LSM-Tree Key-Value Storage Engine from Scratch">
+    <meta property="og:description" content="Crash-resilient, production-grade LSM-Tree key-value database engine with interactive simulator, Bloom filters, and zero data loss durability.">
+    <meta property="og:type" content="website">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+    <!-- Sticky Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="brand-icon">⚡</span>
+            <span>LSM-Tree KV Engine</span>
+        </div>
+        <div class="nav-links">
+            <a href="#simulator">Live Simulator</a>
+            <a href="#tracer">Query Tracer</a>
+            <a href="#architecture">Architecture</a>
+            <a href="#bloom-sandbox">Bloom Explorer</a>
+            <a href="#terminal">Terminal CLI</a>
+            <a href="#quickstart">Quickstart</a>
+            <a href="https://github.com/sarthakguria/lsm-kvstore" target="_blank" rel="noopener noreferrer" class="btn-github">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"></path>
+                </svg>
+                <span>GitHub</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-pill">
+            <span>🛡️ Systems Engineering Challenge</span>
+            <span>&bull;</span>
+            <span>Zero Data Loss Guarantee</span>
+        </div>
+        <h1>
+            Log-Structured Merge Tree<br>
+            <span class="hero-gradient">Storage Engine from Scratch</span>
+        </h1>
+        <p class="hero-subtitle">
+            A production-grade, crash-resilient key-value storage engine engineered in Python. 
+            Guarantees absolute durability under sudden power failures using Write-Ahead Logging (WAL) with CRC32 frame checksums, hardware <code>fsync</code>, SkipList MemTables, Bloom Filters, and atomic K-way compaction.
+        </p>
+        <div class="hero-cta">
+            <a href="#simulator" class="btn-primary">Launch Interactive Simulator</a>
+            <a href="#architecture" class="btn-secondary">Explore SDE Architecture</a>
+            <a href="#terminal" class="btn-secondary">Open Terminal CLI</a>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- Performance & Durability HUD Banner -->
+        <section class="stats-banner">
+            <div class="stat-card">
+                <span class="stat-label">Total PUT Mutations</span>
+                <span class="stat-value" id="stat-puts">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Total GET Queries</span>
+                <span class="stat-value" id="stat-gets">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Zero-I/O Bloom Skips</span>
+                <span class="stat-value text-skip" id="stat-bloom-skips" style="color: var(--accent-emerald);">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Hardware Fsync Flushes</span>
+                <span class="stat-value" id="stat-fsyncs">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Immutable SSTables</span>
+                <span class="stat-value" id="stat-sstables">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Engine Durability State</span>
+                <div class="status-badge status-healthy" id="engine-status-badge">HEALTHY & DURABLE</div>
+            </div>
+        </section>
+
+        <!-- Live LSM Simulator -->
+        <section id="simulator">
+            <div class="section-heading">
+                <div>
+                    <h2 class="section-title">
+                        <span>🎮 Live LSM-Tree Engine Simulator</span>
+                    </h2>
+                    <p class="section-desc">
+                        Interact directly with the in-browser LSM engine. Watch WAL frames sync to disk, MemTable towers grow, automatic flushes generate SSTables, and compaction merge tables.
+                    </p>
+                </div>
+            </div>
+
+            <div class="simulator-layout">
+                <!-- Control Panel (Left Column) -->
+                <aside class="panel">
+                    <h3 class="panel-title">
+                        <span>Database Operations</span>
+                        <span class="badge-subtle">POSIX Engine</span>
+                    </h3>
+
+                    <!-- PUT Form -->
+                    <form id="put-form" class="operation-form">
+                        <div class="form-row">
+                            <input type="text" id="put-key" placeholder="Key (e.g. user:101)" required>
+                            <input type="text" id="put-val" placeholder='Value (e.g. {"name":"Alice"})' required>
+                        </div>
+                        <button type="submit" class="btn-op btn-put">PUT Record (WAL + fsync)</button>
+                    </form>
+
+                    <!-- GET Form -->
+                    <form id="get-form" class="operation-form">
+                        <div class="form-row">
+                            <input type="text" id="get-key" placeholder="Key to query (e.g. user:101)" required>
+                            <button type="submit" class="btn-op btn-get">GET / Trace</button>
+                        </div>
+                    </form>
+
+                    <!-- DELETE Form -->
+                    <form id="del-form" class="operation-form">
+                        <div class="form-row">
+                            <input type="text" id="del-key" placeholder="Key to delete" required>
+                            <button type="submit" class="btn-op btn-del">DELETE (Tombstone)</button>
+                        </div>
+                    </form>
+
+                    <!-- Presets & Simulation Triggers -->
+                    <div class="preset-actions">
+                        <button id="btn-seed-data" class="btn-action">
+                            <span>🌱</span> Seed Demo Batch (Auto-Flush)
+                        </button>
+                        <button id="btn-flush" class="btn-action">
+                            <span>⚡</span> Force Flush MemTable &rarr; SSTable
+                        </button>
+                        <button id="btn-compact" class="btn-action">
+                            <span>🔄</span> Run K-Way Compaction (Merge &amp; Prune)
+                        </button>
+                        <button id="btn-crash" class="btn-action btn-action-danger">
+                            <span>💥</span> Simulate Power Outage Mid-Write
+                        </button>
+                        <button id="btn-recover" class="btn-action btn-action-success">
+                            <span>🛡️</span> Boot &amp; Zero-Data-Loss Recovery
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- Visualization Displays (Right Column) -->
+                <div class="display-panels">
+                    
+                    <!-- MemTable (Active SkipList) -->
+                    <div class="memtable-container">
+                        <div class="gauge-wrapper">
+                            <div class="gauge-header">
+                                <strong>Active In-Memory MemTable (SkipList)</strong>
+                                <span id="memtable-count">0 / 4 keys</span>
+                            </div>
+                            <div class="gauge-bar-bg">
+                                <div id="memtable-capacity-bar" class="gauge-bar-fill"></div>
+                            </div>
+                        </div>
+                        <div id="memtable-nodes" class="skiplist-grid">
+                            <!-- Dynamically generated SkipList towers -->
+                        </div>
+                    </div>
+
+                    <!-- WAL Feed -->
+                    <div class="wal-container">
+                        <div class="panel-title">
+                            <span>Write-Ahead Log (WAL) &mdash; Append-Only Disk Stream</span>
+                            <span class="badge-subtle">CRC32 Framed</span>
+                        </div>
+                        <div id="wal-feed" class="wal-scroll">
+                            <!-- Dynamically appended WAL frames -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- SSTables Disk Tier -->
+            <div class="section-heading">
+                <div>
+                    <h3 class="section-title">
+                        <span>💾 Immutable SSTables on Disk</span>
+                    </h3>
+                    <p class="section-desc">
+                        Persisted tables consisting of a Kirsch-Mitzenmacher Bloom Filter (RAM), Sparse Index (RAM), and Clustered Data Blocks (Disk).
+                    </p>
+                </div>
+            </div>
+
+            <div id="sstables-container" class="sstables-grid">
+                <!-- Dynamically rendered SSTable cards -->
+            </div>
+        </section>
+
+        <!-- Query Tracer Section -->
+        <section id="tracer" style="margin-top: 4rem;">
+            <div class="section-heading">
+                <div>
+                    <h2 class="section-title">
+                        <span>🔍 Interactive Query Path Tracer</span>
+                    </h2>
+                    <p class="section-desc">
+                        Submit a key above or trace an existing key. The tracer steps through the active MemTable, evaluates SSTable Bloom Filters to eliminate disk I/O, binary searches the sparse index, and fetches the target record.
+                    </p>
+                </div>
+            </div>
+
+            <div class="query-tracer-card">
+                <div id="query-trace-steps" class="trace-steps-container">
+                    <div class="empty-state">
+                        <div class="empty-icon">🔎</div>
+                        <div class="empty-title">No Active Query Trace</div>
+                        <div class="empty-desc">Enter any key in the "GET / Trace" form above to watch the multi-tier read path in action.</div>
+                    </div>
+                </div>
+                <div id="query-trace-result"></div>
+            </div>
+        </section>
+
+        <!-- Architecture & SDE Challenge Deep Dive -->
+        <section id="architecture" style="margin-top: 4rem;">
+            <div class="section-heading">
+                <div>
+                    <h2 class="section-title">
+                        <span>🏛️ Architecture &amp; The SDE Challenge</span>
+                    </h2>
+                    <p class="section-desc">
+                        How this database engine achieves zero data loss, durability, and crash consistency under sudden hardware power loss.
+                    </p>
+                </div>
+            </div>
+
+            <div class="deep-dive-grid">
+                <!-- Card 1 -->
+                <div class="deep-dive-card">
+                    <h3>1. The SDE Challenge: Why Standard I/O Fails</h3>
+                    <p>
+                        In standard software, calling <code>file.write()</code> or <code>file.flush()</code> only moves bytes from user space into the operating system kernel's page cache. If physical power is cut 50ms later, all buffered data is permanently lost.
+                    </p>
+                    <p>
+                        <strong>Our Solution:</strong> Every single mutation executes <code>os.fsync(fd)</code>, commanding the physical storage controller to commit bytes to non-volatile flash or platter sectors before returning success.
+                    </p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="deep-dive-card">
+                    <h3>2. Binary WAL Frame &amp; CRC32 Integrity</h3>
+                    <p>
+                        If power cuts mid-write, partial bytes reach disk (a torn write). Every record written to disk is framed with a 32-bit CRC32 checksum:
+                    </p>
+                    <div class="binary-layout-box">
+[CRC32: 4B][PAYLOAD_LEN: 4B]
+[TYPE: 1B][TIMESTAMP_NS: 8B][LSN: 8B][KEY_LEN: 4B][VAL_LEN: 4B][KEY][VAL]
+                    </div>
+                    <p style="margin-top: 0.75rem;">
+                        On reboot, recovery validates each frame. If a torn frame is detected, invalid trailing bytes are truncated via <code>os.ftruncate</code>, restoring complete consistency.
+                    </p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="deep-dive-card">
+                    <h3>3. SkipList Probabilistic MemTable</h3>
+                    <p>
+                        Unlike self-balancing trees (AVL or Red-Black) which require complex lock rotations during mutations, SkipLists use probabilistic leveling to achieve <code>O(log N)</code> search, insert, and ordered iteration without heavy locking overhead.
+                    </p>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="deep-dive-card">
+                    <h3>4. Kirsch-Mitzenmacher Bloom Filter</h3>
+                    <p>
+                        Avoids costly disk seeks by computing two 64-bit hashes from SHA-256 and generating <code>k</code> bit positions via:
+                        <code>g_i(x) = (h1(x) + i * h2(x)) mod m</code>.
+                        Negative queries are rejected in memory with zero disk I/O.
+                    </p>
+                </div>
+
+                <!-- Card 5 -->
+                <div class="deep-dive-card">
+                    <h3>5. Two-Phase Atomic SSTable Flush</h3>
+                    <p>
+                        When freezing a MemTable, writes go to a temporary file (<code>*.sst.tmp</code>). Only after <code>os.fsync()</code> verifies the data is physically durable does the engine execute <code>os.replace()</code> (an atomic POSIX operation). Interrupted flushes leave clean temporary files pruned on reboot.
+                    </p>
+                </div>
+
+                <!-- Card 6 -->
+                <div class="deep-dive-card">
+                    <h3>6. K-Way Merge Compaction</h3>
+                    <p>
+                        As writes accumulate, multiple SSTables are created. The compactor uses a min-heap priority queue to stream records from newest to oldest, deduplicating superseded keys and permanently purging tombstones (🪦) to reclaim disk capacity.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bloom Filter Interactive Playground -->
+        <section id="bloom-sandbox" style="margin-top: 4rem;">
+            <div class="section-heading">
+                <div>
+                    <h2 class="section-title">
+                        <span>🧪 Interactive Bloom Filter Sandbox</span>
+                    </h2>
+                    <p class="section-desc">
+                        Explore the Kirsch-Mitzenmacher double-hashing algorithm. Add keys to flip bits in the 64-bit array, or test arbitrary keys to observe fast zero-I/O rejection.
+                    </p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="form-row" style="margin-bottom: 1.25rem;">
+                    <input type="text" id="bloom-input" placeholder="Enter key (e.g. order:789 or customer:42)">
+                    <button id="bloom-add-btn" class="btn-op btn-put">Add to Filter</button>
+                    <button id="bloom-test-btn" class="btn-op btn-get">Test Membership</button>
+                </div>
+
+                <div class="section-label">
+                    <span>64-Bit Array Representation</span>
+                    <span class="section-sub">Green = Bit Set (1), Gray = Unset (0)</span>
+                </div>
+                <div id="bloom-bits-grid" class="bloom-grid-64">
+                    <!-- Dynamically rendered 64 bits -->
+                </div>
+
+                <div id="bloom-hashes-output">
+                    <div class="hash-result">Type a key and click "Add to Filter" or "Test Membership" to inspect bit calculations.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Terminal CLI -->
+        <section id="terminal" style="margin-top: 4rem;">
+            <div class="section-heading">
+                <div>
+                    <h2 class="section-title">
+                        <span>💻 Interactive Engine Terminal CLI</span>
+                    </h2>
+                    <p class="section-desc">
+                        Direct command line interface to the storage engine. Supports full command history (Up/Down arrow keys) and native commands.
+                    </p>
+                </div>
+            </div>
+
+            <div class="terminal-card">
+                <div class="terminal-header">
+                    <div class="term-dots">
+                        <span class="dot dot-red"></span>
+                        <span class="dot dot-yellow"></span>
+                        <span class="dot dot-green"></span>
+                    </div>
+                    <span class="term-title">lsm-kvstore -- interactive shell</span>
+                    <span class="badge-subtle">v1.0.0</span>
+                </div>
+                <div class="terminal-body">
+                    <div id="terminal-output" class="terminal-output">
+                        <div class="term-line">LSM-Tree Key-Value Engine Shell [Version 1.0.0]</div>
+                        <div class="term-line">Hardware fsync policy: ALWAYS &bull; CRC32 framing active</div>
+                        <div class="term-line">Type <span class="term-prompt">'help'</span> for available commands (put, get, del, scan, flush, compact, crash, recover, stats).</div>
+                    </div>
+                    <div class="terminal-input-row">
+                        <span class="term-prompt">lsm-engine&gt;</span>
+                        <input type="text" id="terminal-input" placeholder="Type a command and press Enter..." autofocus>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quickstart & API Reference -->
+        <section id="quickstart" style="margin-top: 4rem; margin-bottom: 4rem;">
+            <div class="section-heading">
+                <div>
+                    <h2 class="section-title">
+                        <span>🚀 Python API &amp; Quickstart</span>
+                    </h2>
+                    <p class="section-desc">
+                        Easily embed the storage engine directly into your Python backend or distributed service.
+                    </p>
+                </div>
+            </div>
+
+            <div class="deep-dive-card">
+                <div class="binary-layout-box" style="line-height: 1.5; font-size: 0.88rem;">
+<span style="color: var(--accent-purple);">from</span> lsm <span style="color: var(--accent-purple);">import</span> LSMTree, WriteBatch
+
+<span style="color: var(--text-muted);"># Initialize engine with durability guarantees</span>
+db = LSMTree(data_dir=<span style="color: var(--accent-emerald);">"./data"</span>, memtable_max_bytes=4*1024*1024)
+
+<span style="color: var(--text-muted);"># 1. Point Mutations (WAL CRC32 + fsync + MemTable SkipList)</span>
+db.put(<span style="color: var(--accent-cyan);">"user:101"</span>, <span style="color: var(--accent-emerald);">b'{"name": "Alice", "role": "admin"}'</span>)
+value = db.get(<span style="color: var(--accent-cyan);">"user:101"</span>)
+print(<span style="color: var(--accent-emerald);">"Retrieved:"</span>, value)
+
+<span style="color: var(--text-muted);"># 2. Atomic Transactional Batches (TXN_BEGIN ... TXN_COMMIT)</span>
+batch = WriteBatch()
+batch.put(<span style="color: var(--accent-cyan);">"account:A"</span>, <span style="color: var(--accent-emerald);">b"balance:500"</span>)
+batch.put(<span style="color: var(--accent-cyan);">"account:B"</span>, <span style="color: var(--accent-emerald);">b"balance:1200"</span>)
+db.write_batch(batch)  <span style="color: var(--text-muted);"># Atomically synced in single fsync</span>
+
+<span style="color: var(--text-muted);"># 3. Ordered Range Scan</span>
+<span style="color: var(--accent-purple);">for</span> key, val <span style="color: var(--accent-purple);">in</span> db.scan(start_key=<span style="color: var(--accent-cyan);">"account:"</span>, end_key=<span style="color: var(--accent-cyan);">"account:\xff"</span>):
+    print(f<span style="color: var(--accent-emerald);">"{key} -> {val}"</span>)
+
+<span style="color: var(--text-muted);"># 4. K-Way Compaction (purges superseded records & tombstones)</span>
+db.compact()
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container" style="padding: 0;">
+            <p style="margin-bottom: 0.5rem;">
+                Built with precision for high-performance systems engineering.
+            </p>
+            <p>
+                <a href="https://github.com/sarthakguria/lsm-kvstore" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+                &bull;
+                <a href="#simulator">Interactive Simulator</a>
+                &bull;
+                MIT License &copy; 2026 Sarthak Guria
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="assets/js/lsm_core.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
