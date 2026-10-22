@@ -10,15 +10,15 @@ Designed to address the **Senior Systems Engineer (SDE) Challenge**: **Guarantee
 
 An interactive showcase website and engine simulator is hosted directly on GitHub Pages on the `main` branch:
 
-👉 **[Launch Live Simulator & Architecture Explorer](https://sarthakguria.github.io/lsm-kvstore/)**
+👉 **[Launch Live Simulator & Architecture Explorer](https://sarthakguria20-debug.github.io/lsm-kvstore/)**
 
 ### Website Features
+
 - **🎮 In-Browser LSM Engine Simulator**: Execute `PUT`, `GET`, `DELETE`, and `SCAN` operations in real time.
 - **🔍 Step-by-Step Query Tracer**: Visualizes read-path traversal from MemTable to Bloom Filter fast rejects, Sparse Index binary search, and Data Block retrieval.
 - **💥 Power Outage & Torn Write Simulator**: Simulate mid-write power loss, inject corrupted CRC32 frames, and execute automatic zero-data-loss recovery.
 - **🧪 Kirsch-Mitzenmacher Bloom Filter Sandbox**: Explore double hashing, inspect flipped bit positions in a 64-bit array, and test membership.
 - **💻 Interactive Terminal Shell**: Full in-browser CLI emulator with command history.
-
 
 ---
 
